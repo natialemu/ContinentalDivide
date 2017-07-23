@@ -19,7 +19,6 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.util.Log;
 import android.view.View;
 
 import java.util.Arrays;
@@ -41,6 +40,8 @@ public class ContinentMap extends View {
             6, 7, 3, 4, 5,
             5, 1, 2, 3, 4,
     };
+
+    private int[] MAP_COLORS = new int[DEFAULT_MAP.length];
 
     public ContinentMap(Context context) {
         super(context);
@@ -114,6 +115,9 @@ public class ContinentMap extends View {
             //paint.setColor(Color.RED);
             canvas.drawRect(row*cellWidth,column*cellWidth,row*cellWidth + cellWidth, column*cellWidth + cellWidth,paint);
 
+            //given x = row and y = column
+            //to convert to coordinate it is simply x*width and y*height, width, height, paint
+
         }
         /**
          **
@@ -149,15 +153,58 @@ public class ContinentMap extends View {
     private void buildUpContinentalDivideRecursively(
             int x, int y, boolean flowsNW, boolean flowsSE, int previousHeight) {
 
-        if(isContinentalDivide(x,y)){
-            //color the cell at x and y with the corresponding continental divide color
+        Cell cell = new Cell();
+        if(isMaxHeight(x,y)){
+
+            //if current cell has been proccessed, then check if it's current flow color combination Union the new one makes it a continental
+            //divide. in other words, if it was (true, false) in the first one and (false true)
+            //boardSize*x + y
+            MAP_COLORS[boardSize*x + y] = Color.RED;
+
+            cell.flowsNW = flowsNW || cell.flowsNW;;
+            cell.flowsSE = flowsSE || cell.flowsSE;
+            cell.processing = true;
+            map[boardSize*x+y] = cell;
+            return;
+
+            //if none of the neighbors are valid then return
             //return
 
 
             //get the color of this specific thing, color it that way
         }else {
+
+            //if current cell has been proccessed, then check if it's current flow color combination Union the new one makes it a continental
+            //divide. in other words, if it was (true, false) in the first one and (false true)
+            cell.flowsNW = flowsNW || cell.flowsNW;
+            cell.flowsSE = flowsSE || cell.flowsSE;
+            cell.basin = !flowsNW && !flowsSE;
+            cell.processing = true;
+            map[boardSize*x + y] = cell;
+
+
+            if(isValid(x+1,y) )// &&height of (x+1,y) > height of x,y)//
+            {
+                buildUpContinentalDivideRecursively(x+1,y,flowsNW,flowsSE,cell.height);
+
+            }
+            if(isValid(x,y+1)){
+                buildUpContinentalDivideRecursively(x,y+1,flowsNW,flowsSE,cell.height);
+
+            }
+            if(isValid(x-1,y)){
+                buildUpContinentalDivideRecursively(x-1,y,flowsNW,flowsSE,cell.height);
+
+            }
+            if(isValid(x,y-1)){
+                buildUpContinentalDivideRecursively(x,y-1,flowsNW,flowsSE,cell.height);
+
+            }
+
             //color the cell at x and y to the corresponding color of whichever is true of flowsNW or flowsSE
             //check each one of the neighbors for validity as far as going off the board goes and increasing height
+            // then check if the proccesign flag is true for the current cell and if so check if both SW and NE are true. if so,
+            //then it is a continental divide
             //if the above condition evaluates to true:
             //recursively call on the neighbouring cell by passing the right flow and also pass the current height as previousHeight
 
@@ -179,8 +226,24 @@ public class ContinentMap extends View {
          **/
     }
 
-    private boolean isContinentalDivide(int x, int y) {
+    //checks if the current cell is a valid cell
+    private boolean isValid(int x, int y) {
+        //
+        if(x > boardSize -1 || x < 0 || y > boardSize -1 || y < 0){
+            return false;
+        }
+        return true;
+
+    }
+
+    private boolean isMaxHeight(int x, int y) {
+
+        //check if x+1 is a valid cell and if so a higher hight. if so return false
+        //else if check y+1 is a valid cell and if it is a heigher point. if so return false
+        //...
+
         return false;
+
     }
 
     public void buildDownContinentalDivide(boolean oneStep) {

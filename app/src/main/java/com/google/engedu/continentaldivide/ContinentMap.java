@@ -95,37 +95,35 @@ public class ContinentMap extends View {
 
         Paint paint = new Paint();
 
-        paint.setStyle(Paint.Style.FILL_AND_STROKE);
-
-        int screenHeight = canvas.getHeight();
         int screenWidth = canvas.getWidth();
         int cellWidth = screenWidth/boardSize;
-
-
 
         for(int i = 0; i < boardSize*boardSize; i++){
             int row = i/boardSize;
             int column = i%boardSize;
 
-            //paint.setARGB(0,DEFAULT_MAP[i]*(maxHeight/7),DEFAULT_MAP[i]*(maxHeight/7),DEFAULT_MAP[i]*(maxHeight/7));
-            //paint.setColor(Color.rgb(DEFAULT_MAP[i]*(maxHeight/7),DEFAULT_MAP[i]*(maxHeight/7),DEFAULT_MAP[i]*(maxHeight/7)));
+            paint.setStyle(Paint.Style.FILL_AND_STROKE);
+            if(!getMap(row,column).processing){
+                float dv = ((float) (getMap(row,column).height))/7;
+                paint.setColor(Color.rgb((int)(dv*127)+128,(int)(dv*127)+128,(int)(dv*127)+128));
+            }else if(getMap(row,column).flowsNW && !getMap(row,column).flowsSE){
+                paint.setColor(Color.GREEN);
+            } else if(getMap(row,column).flowsSE && !getMap(row,column).flowsNW){
+                paint.setColor(Color.BLUE);
+            }else{
+                paint.setColor(Color.RED);
+            }
 
-            float dv = (DEFAULT_MAP[i].floatValue())/7;
-            paint.setColor(Color.rgb((int)(dv*127)+128,(int)(dv*127)+128,(int)(dv*127)+128));
-            //paint.setColor(Color.RED);
             canvas.drawRect(row*cellWidth,column*cellWidth,row*cellWidth + cellWidth, column*cellWidth + cellWidth,paint);
 
-            //given x = row and y = column
-            //to convert to coordinate it is simply x*width and y*height, width, height, paint
+            paint.setColor(Color.BLACK);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setTextAlign(Paint.Align.CENTER);
+            paint.setTextSize(70);
+            canvas.drawText(Integer.toString(getMap(row,column).height),row*cellWidth + cellWidth/2,column*cellWidth + cellWidth/2,paint);
 
         }
-        /**
-         **
-         **  YOUR CODE GOES HERE
-         * using the default map and a for loop, draw a rectangle of uniform width and height, at different locations with the color of the rectangles
-         * depending on the value in default map.
-         **
-         **/
+
     }
 
     public void buildUpContinentalDivide(boolean oneStep) {
@@ -153,77 +151,34 @@ public class ContinentMap extends View {
     private void buildUpContinentalDivideRecursively(
             int x, int y, boolean flowsNW, boolean flowsSE, int previousHeight) {
 
-        Cell cell = new Cell();
+        Cell cell = getMap(x,y);
+        cell.flowsNW = flowsNW || cell.flowsNW;;
+        cell.flowsSE = flowsSE || cell.flowsSE;
+        cell.basin = !flowsNW && !flowsSE;
+        cell.processing = true;
+
         if(isMaxHeight(x,y)){
 
-            //if current cell has been proccessed, then check if it's current flow color combination Union the new one makes it a continental
-            //divide. in other words, if it was (true, false) in the first one and (false true)
-            //boardSize*x + y
-            MAP_COLORS[boardSize*x + y] = Color.RED;
-
-            cell.flowsNW = flowsNW || cell.flowsNW;;
-            cell.flowsSE = flowsSE || cell.flowsSE;
-            cell.processing = true;
-            map[boardSize*x+y] = cell;
             return;
 
-            //if none of the neighbors are valid then return
-            //return
-
-
-            //get the color of this specific thing, color it that way
         }else {
 
-            //if current cell has been proccessed, then check if it's current flow color combination Union the new one makes it a continental
-            //divide. in other words, if it was (true, false) in the first one and (false true)
-            cell.flowsNW = flowsNW || cell.flowsNW;
-            cell.flowsSE = flowsSE || cell.flowsSE;
-            cell.basin = !flowsNW && !flowsSE;
-            cell.processing = true;
-            map[boardSize*x + y] = cell;
-
-
-            if(isValid(x+1,y) )// &&height of (x+1,y) > height of x,y)//
+            if(isValid(x+1,y) && getMap(x+1,y).height > getMap(x, y).height )// &&height of (x+1,y) > height of x,y)//
             {
                 buildUpContinentalDivideRecursively(x+1,y,flowsNW,flowsSE,cell.height);
-
             }
-            if(isValid(x,y+1)){
+            if(isValid(x,y+1)&& getMap(x,y+1).height > getMap(x, y).height){
                 buildUpContinentalDivideRecursively(x,y+1,flowsNW,flowsSE,cell.height);
-
             }
-            if(isValid(x-1,y)){
+            if(isValid(x-1,y)&& getMap(x-1,y).height > getMap(x, y).height){
                 buildUpContinentalDivideRecursively(x-1,y,flowsNW,flowsSE,cell.height);
-
             }
-            if(isValid(x,y-1)){
+            if(isValid(x,y-1)&& getMap(x,y-1).height > getMap(x, y).height){
                 buildUpContinentalDivideRecursively(x,y-1,flowsNW,flowsSE,cell.height);
-
             }
 
-            //color the cell at x and y to the corresponding color of whichever is true of flowsNW or flowsSE
-            //check each one of the neighbors for validity as far as going off the board goes and increasing height
-            // then check if the proccesign flag is true for the current cell and if so check if both SW and NE are true. if so,
-            //then it is a continental divide
-            //if the above condition evaluates to true:
-            //recursively call on the neighbouring cell by passing the right flow and also pass the current height as previousHeight
-
-            /*
-            What is unneccessarily being repeated here:
-            1. After base case is reached, a cell may be recomputed even if the color has already been computed instead of returning
-
-
-             */
         }
-        /**
-         **
-         **  YOUR CODE GOES HERE
-         * base case is when you reach a continental divide which is a point where nothing flows or it flows to both. when you reach that point, return
-         * otherwise, color the current cell with the same color as the one that lead up to it. recursively do this for each neighboring cell that is
-         * at a higher altitude and happens to be valid(in the board)
-         *
-         **
-         **/
+
     }
 
     //checks if the current cell is a valid cell
@@ -241,8 +196,17 @@ public class ContinentMap extends View {
         //check if x+1 is a valid cell and if so a higher hight. if so return false
         //else if check y+1 is a valid cell and if it is a heigher point. if so return false
         //...
+        if(isValid(x+1,y) && getMap(x+1,y).height > getMap(x,y).height){
+            return false;
+        }else if(isValid(x-1,y) && getMap(x-1,y).height > getMap(x,y).height){
+            return false;
+        } else if(isValid(x,y+1) && getMap(x,y+1).height > getMap(x,y).height){
+            return false;
+        }else if(isValid(x,y-1) && getMap(x,y-1).height > getMap(x,y).height){
+            return false;
+        }
 
-        return false;
+        return true;
 
     }
 
@@ -275,9 +239,46 @@ public class ContinentMap extends View {
 
     private Cell buildDownContinentalDivideRecursively(int x, int y, int previousHeight) {
         Cell workingCell = new Cell();
+
+        if(getMap(x,y).height == 1 || getMap(x,y).processing){
+            getMap(x,y).processing = true;
+            if(x == 0 || y == 0){
+                getMap(x,y).flowsNW = true;
+            }else if(x == boardSize-1 || y == boardSize - 1){
+                getMap(x,y).flowsSE = true;
+            }
+            return getMap(x,y);
+        }else{
+
+            if(isValid(x+1,y) && getMap(x+1,y).height < getMap(x, y).height )// &&height of (x+1,y) > height of x,y)//
+            {
+                Cell returnedCell = buildDownContinentalDivideRecursively(x+1,y,getMap(x, y).height);
+                getMap(x,y).flowsNW = getMap(x,y).flowsNW | returnedCell.flowsNW;
+
+            }
+            if(isValid(x,y+1)&& getMap(x+1,y).height < getMap(x, y).height){
+                Cell returnedCell = buildDownContinentalDivideRecursively(x,y+1,getMap(x, y).height);
+                getMap(x,y).flowsNW = getMap(x,y).flowsNW | returnedCell.flowsNW;
+
+            }
+            if(isValid(x-1,y)&& getMap(x-1,y).height < getMap(x, y).height){
+                Cell returnedCell = buildDownContinentalDivideRecursively(x-1,y,getMap(x, y).height);
+                getMap(x,y).flowsNW = getMap(x,y).flowsNW | returnedCell.flowsNW;
+
+
+            }
+            if(isValid(x,y-1)&& getMap(x,y-1).height > getMap(x, y).height){
+
+                Cell returnedCell = buildDownContinentalDivideRecursively(x,y-1,getMap(x, y).height);
+                getMap(x,y).flowsNW = getMap(x,y).flowsNW | returnedCell.flowsNW;
+
+            }
+            getMap(x,y).processing = true;
+        }
         /**
          * base case is if you reach the coast at which point you return the cell whose color you already know
          * otherwise:
+         *
          * recursively call the method with the coordinates of each cell that is valid(in the board and decending height) and the current height and do
          * the following for each of thoes recursive calls:
          * get the recursively returned cell value from caling the function in the above step

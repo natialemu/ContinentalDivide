@@ -41,7 +41,6 @@ public class ContinentMap extends View {
             5, 1, 2, 3, 4,
     };
 
-    private int[] MAP_COLORS = new int[DEFAULT_MAP.length];
 
     public ContinentMap(Context context) {
         super(context);
@@ -104,14 +103,18 @@ public class ContinentMap extends View {
 
             paint.setStyle(Paint.Style.FILL_AND_STROKE);
             if(!getMap(row,column).processing){
-                float dv = ((float) (getMap(row,column).height))/7;
+                float dv = ((float) (getMap(row,column).height))/MAX_HEIGHT;
                 paint.setColor(Color.rgb((int)(dv*127)+128,(int)(dv*127)+128,(int)(dv*127)+128));
             }else if(getMap(row,column).flowsNW && !getMap(row,column).flowsSE){
                 paint.setColor(Color.GREEN);
             } else if(getMap(row,column).flowsSE && !getMap(row,column).flowsNW){
                 paint.setColor(Color.BLUE);
-            }else{
+            }else if(getMap(row,column).flowsNW && getMap(row,column).flowsSE){
                 paint.setColor(Color.RED);
+            }else if(!getMap(row,column).flowsNW && !getMap(row,column).flowsSE){
+                float dv = ((float) (getMap(row,column).height))/MAX_HEIGHT;
+                paint.setColor(Color.rgb((int)(dv*127)+128,(int)(dv*127)+128,(int)(dv*127)+128));
+
             }
 
             canvas.drawRect(row*cellWidth,column*cellWidth,row*cellWidth + cellWidth, column*cellWidth + cellWidth,paint);
@@ -119,8 +122,8 @@ public class ContinentMap extends View {
             paint.setColor(Color.BLACK);
             paint.setStyle(Paint.Style.STROKE);
             paint.setTextAlign(Paint.Align.CENTER);
-            paint.setTextSize(70);
-            canvas.drawText(Integer.toString(getMap(row,column).height),row*cellWidth + cellWidth/2,column*cellWidth + cellWidth/2,paint);
+            paint.setTextSize(50*5/boardSize);
+            canvas.drawText(Integer.toString(getMap(row,column).height),row*cellWidth + 2*cellWidth/3,column*cellWidth + 2*cellWidth/3,paint);
 
         }
 
@@ -218,7 +221,7 @@ public class ContinentMap extends View {
             for (int y = 0; y < boardSize; y++) {
                 for (int x = 0; x < boardSize; x++) {
                     Cell cell = getMap(x, y);
-                    if (!(cell.flowsNW || cell.flowsSE || cell.basin) && cell.height > foundMaxHeight) {
+                    if (!cell.processing && cell.height > foundMaxHeight) {
                         maxUnprocessedX = x;
                         maxUnprocessedY = y;
                         foundMaxHeight = cell.height;
@@ -238,58 +241,63 @@ public class ContinentMap extends View {
     }
 
     private Cell buildDownContinentalDivideRecursively(int x, int y, int previousHeight) {
-        Cell workingCell = new Cell();
 
-        if(getMap(x,y).height == 1 || getMap(x,y).processing){
-            getMap(x,y).processing = true;
+        if(getMap(x,y).processing){
+
+            return getMap(x,y);
+
+        } else{
+
             if(x == 0 || y == 0){
                 getMap(x,y).flowsNW = true;
-            }else if(x == boardSize-1 || y == boardSize - 1){
+            }
+
+            if(x == boardSize-1 || y == boardSize - 1){
                 getMap(x,y).flowsSE = true;
             }
-            return getMap(x,y);
-        }else{
 
-            if(isValid(x+1,y) && getMap(x+1,y).height < getMap(x, y).height )// &&height of (x+1,y) > height of x,y)//
+            Cell workingCell = new Cell();
+
+            if(isValid(x+1,y) && getMap(x+1,y).height < getMap(x, y).height )
             {
-                Cell returnedCell = buildDownContinentalDivideRecursively(x+1,y,getMap(x, y).height);
-                getMap(x,y).flowsNW = getMap(x,y).flowsNW | returnedCell.flowsNW;
+                workingCell = buildDownContinentalDivideRecursively(x+1,y,getMap(x, y).height);
+                getMap(x,y).flowsNW = getMap(x,y).flowsNW || workingCell.flowsNW;
+                getMap(x,y).flowsSE = getMap(x,y).flowsSE || workingCell.flowsSE;
 
             }
-            if(isValid(x,y+1)&& getMap(x+1,y).height < getMap(x, y).height){
-                Cell returnedCell = buildDownContinentalDivideRecursively(x,y+1,getMap(x, y).height);
-                getMap(x,y).flowsNW = getMap(x,y).flowsNW | returnedCell.flowsNW;
+
+            if(isValid(x,y+1)&& getMap(x,y+1).height < getMap(x, y).height){
+
+                workingCell = buildDownContinentalDivideRecursively(x,y+1,getMap(x, y).height);
+                getMap(x,y).flowsNW = getMap(x,y).flowsNW || workingCell.flowsNW;
+                getMap(x,y).flowsSE = getMap(x,y).flowsSE || workingCell.flowsSE;
 
             }
+
             if(isValid(x-1,y)&& getMap(x-1,y).height < getMap(x, y).height){
-                Cell returnedCell = buildDownContinentalDivideRecursively(x-1,y,getMap(x, y).height);
-                getMap(x,y).flowsNW = getMap(x,y).flowsNW | returnedCell.flowsNW;
+
+                workingCell = buildDownContinentalDivideRecursively(x-1,y,getMap(x, y).height);
+                getMap(x,y).flowsNW = getMap(x,y).flowsNW || workingCell.flowsNW;
+                getMap(x,y).flowsSE = getMap(x,y).flowsSE || workingCell.flowsSE;
 
 
             }
-            if(isValid(x,y-1)&& getMap(x,y-1).height > getMap(x, y).height){
 
-                Cell returnedCell = buildDownContinentalDivideRecursively(x,y-1,getMap(x, y).height);
-                getMap(x,y).flowsNW = getMap(x,y).flowsNW | returnedCell.flowsNW;
+            if(isValid(x,y-1)&& getMap(x,y-1).height < getMap(x, y).height){
+
+
+                workingCell = buildDownContinentalDivideRecursively(x,y-1,getMap(x, y).height);
+                getMap(x,y).flowsNW = getMap(x,y).flowsNW || workingCell.flowsNW;
+                getMap(x,y).flowsSE = getMap(x,y).flowsSE || workingCell.flowsSE;
 
             }
+
             getMap(x,y).processing = true;
+
+            return getMap(x,y);
+
         }
-        /**
-         * base case is if you reach the coast at which point you return the cell whose color you already know
-         * otherwise:
-         *
-         * recursively call the method with the coordinates of each cell that is valid(in the board and decending height) and the current height and do
-         * the following for each of thoes recursive calls:
-         * get the recursively returned cell value from caling the function in the above step
-         * assign its color to the current cell
-         *
-         **
-         **
-         **  YOUR CODE GOES HERE
-         **
-         **/
-        return workingCell;
+
     }
 
     public void generateTerrain(int detail) {
@@ -301,6 +309,39 @@ public class ContinentMap extends View {
                 map[i] = new Cell();
             }
         }
+
+        //set the four corners to some pre-defined value
+        //Random random = new Random();
+
+        map[0].height = random.nextInt(255);
+        map[boardSize - 1].height = random.nextInt(255);
+        map[boardSize*boardSize -1].height = random.nextInt(255);
+        map[boardSize*boardSize - boardSize].height = random.nextInt(255);
+
+        /*int middleElementX = ((boardSize*boardSize - 1)/boardSize + (boardSize -1)/boardSize)/2;
+        int middleElementY = (0%boardSize + (boardSize -1)%boardSize)/2;
+
+        int middleElement = middleElementX*boardSize + middleElementY;
+        int topMiddleElement = (boardSize - 1 + 0)/2;
+        int bottomMiddleElement = ((boardSize*boardSize -1) + (boardSize*boardSize - boardSize))/2;
+        int rightMiddleElement = middleElement + (((boardSize -1) -(0)))/2;
+        int leftMiddleElement = middleElement - ((boardSize -1) - (0))/2;
+
+        double middleAverage = ((double) (map[0].height + map[boardSize - 1].height + map[boardSize*boardSize -1].height + map[boardSize*boardSize - boardSize].height))/4;
+
+        map[middleElement].height = (int)middleAverage + random.nextInt(10);
+        map[topMiddleElement].height = (int)((map[boardSize - 1].height+map[0].height)/2 + random.nextInt(8));
+
+        map[bottomMiddleElement].height = (int)((map[boardSize*boardSize -1].height+map[boardSize*boardSize - boardSize].height)/2 + random.nextInt(6));
+
+        map[rightMiddleElement].height = (int)((map[boardSize - 1].height+map[boardSize*boardSize -1].height)/2 + random.nextInt(5));
+
+        map[leftMiddleElement].height = (int)((map[0].height+map[boardSize*boardSize - boardSize].height)/2 + random.nextInt(3));*/
+
+
+        diamondSquare(map,0,boardSize -1,boardSize*boardSize - boardSize, boardSize*boardSize - 1);
+        //create a function that takes the the map array and pointers to the four corners of the array
+
         /**
          **
          **  YOUR CODE GOES HERE
@@ -308,4 +349,48 @@ public class ContinentMap extends View {
          **/
         invalidate();
     }
+
+    private void diamondSquare(Cell[] map, int topLeft, int topRight, int bottomLeft, int bottomRight) {
+
+
+
+        if(squareSizeTooSmall(topLeft,topRight, bottomLeft,bottomRight)){
+            return;
+        }
+
+        double middleAverage = ((double) (map[topLeft].height + map[topRight].height + map[bottomLeft].height + map[bottomRight].height))/4;
+
+
+
+        int middleElementX = (bottomRight/boardSize + topRight/boardSize)/2;
+        int middleElementY = (topLeft%boardSize + topRight%boardSize)/2;
+
+        //getMap(middleElementX,middleElementY).height = (int)((double) (map[topLeft].height + map[topRight].height + map[bottomLeft].height + map[bottomRight].height))/4 + random.nextInt(10);
+
+        int middleElement = middleElementX*boardSize + middleElementY;
+
+        int topMiddleElement = (topRight + topLeft)/2;
+        int bottomMiddleElement = (bottomRight + bottomLeft)/2;
+        int rightMiddleElement = middleElement + ((topRight - topLeft))/2;
+        int leftMiddleElement = middleElement - ((topRight - topLeft))/2;
+
+
+        map[middleElement].height = (int)middleAverage + random.nextInt(10);
+        map[topMiddleElement].height = (int)((map[topRight].height+map[topLeft].height)/2 + random.nextInt(8));
+        map[bottomMiddleElement].height = (int)((map[bottomRight].height+map[bottomLeft].height)/2 + random.nextInt(6));
+        map[rightMiddleElement].height = (int)((map[topRight].height+map[bottomRight].height)/2 + random.nextInt(5));
+        map[leftMiddleElement].height = (int)((map[topLeft].height+map[bottomLeft].height)/2 + random.nextInt(3));
+
+        diamondSquare(map,topLeft,topMiddleElement,middleElement,leftMiddleElement);
+        diamondSquare(map,middleElement,rightMiddleElement,bottomRight,bottomMiddleElement);
+        diamondSquare(map,topMiddleElement,topRight,rightMiddleElement,middleElement);
+        diamondSquare(map,leftMiddleElement,middleElement,bottomMiddleElement,bottomLeft);
+
+    }
+
+    private boolean squareSizeTooSmall(int topLeft, int topRight, int bottomLeft, int bottomRight) {
+        return (topRight - topLeft+1)*((bottomRight/boardSize - topLeft/boardSize) + 1) < 9;
+
+    }
+
 }

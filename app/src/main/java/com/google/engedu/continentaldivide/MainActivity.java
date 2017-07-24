@@ -38,7 +38,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public boolean onGenerateTerrain(View view) {
-        continentMap.generateTerrain(3);
+        continentMap.generateTerrain(7);
         return true;
     }
 
